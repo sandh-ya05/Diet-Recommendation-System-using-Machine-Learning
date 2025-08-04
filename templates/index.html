@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HealthyPlate - Diet Recommendation System</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-gray-100 font-sans">
+  <!-- Navigation Bar -->
+  <nav class="navbar navbar-dark bg-success sticky-top">
+      <div class="container flex justify-between items-center py-2">
+          <a class="navbar-brand text-2xl font-bold" href="{{ url_for('index') }}">HealthyPlate</a>
+          <div class="navbar-nav flex items-center" id="main-nav">
+              <!-- Guest Navigation (Default) -->
+              <div id="guest-nav" class="flex items-center">
+                  <a class="nav-link text-white px-3 py-2 hover:bg-green-700 rounded" href="#home">Home</a>
+                  <a class="nav-link text-white px-3 py-2 hover:bg-green-700 rounded" href="#about">About</a>
+                  <a class="nav-link text-white px-3 py-2 hover:bg-green-700 rounded" href="{{ url_for('login_page') }}">Login</a>
+                  <a class="nav-link text-white px-3 py-2 hover:bg-green-700 rounded" href="{{ url_for('register_page') }}">Register</a>
+              </div>
+
+              <!-- User Navigation (Hidden by default) -->
+              <div id="user-nav" class="hidden flex items-center">
+                  <a class="nav-link text-white px-3 py-2 hover:bg-green-700 rounded" href="{{ url_for('index') }}">Home</a>
+                  <a class="nav-link text-white px-3 py-2 hover:bg-green-700 rounded" href="#about">About</a>
+                  <div class="dropdown">
+                      <button class="btn text-white dropdown-toggle px-3 py-2 hover:bg-green-700 rounded" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                          <svg class="inline-block w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zm-4 7a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                          </svg>
+                          <span id="username-display-index">User</span>
+                      </button>
+                      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                          <li><a class="dropdown-item" href="#">Welcome, <span id="username-display-dropdown-index">User</span></a></li>
+                          <li><hr class="dropdown-divider"></li>
+                          <li><a class="dropdown-item" href="#" onclick="logout()">Logout</a></li>
+                      </ul>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section id="home" class="hero-bg text-white py-20">
+      <div class="container mx-auto text-center">
+          <h2 class="text-4xl md:text-5xl font-bold mb-4">Welcome to HealthyPlate</h2>
+          <p class="text-lg md:text-xl mb-6">Your personalized diet recommendation system for a healthier you!</p>
+          <a href="{{ url_for('diet_form_page') }}" class="btn btn-success px-6 py-3">Get Started</a>
+      </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="py-16">
+      <div class="container mx-auto px-4">
+          <h2 class="text-3xl font-bold text-center mb-12">Why Choose HealthyPlate?</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div class="bg-white p-6 rounded-lg shadow-md">
+                  <img src="{{ url_for('static', filename='images/a.jpg') }}" alt="Personalized Plans" class="card-img mb-4">
+                  <h3 class="text-xl font-semibold mb-2">Personalized Plans</h3>
+                  <p class="text-gray-600">Get diet plans tailored to your goals and preferences.</p>
+              </div>
+              <div class="bg-white p-6 rounded-lg shadow-md">
+                  <img src="{{ url_for('static', filename='images/nutrition.jpg') }}" alt="Nutrition Guidance" class="card-img mb-4">
+                  <h3 class="text-xl font-semibold mb-2">Help You Through Nutrition</h3>
+                  <p class="text-gray-600">Nutrition is the sweet symphony of life let it guide you to harmony and health every day.</p>
+              </div>
+              <div class="bg-white p-6 rounded-lg shadow-md">
+                  <img src="{{ url_for('static', filename='images/main.jpg') }}" alt="Instant Recommendations" class="card-img mb-4">
+                  <h3 class="text-xl font-semibold mb-2">Instant Diet Recommend</h3>
+                  <p class="text-gray-600">Get your dream diet in a snap with HealthyPlate enter your details and let smart tech craft a perfect, personalized plan now</p>
+              </div>
+          </div>
+      </div>
+  </section>
+
+  <!-- About Section -->
+  <section id="about" class="bg-gray-200 py-16">
+      <div class="container mx-auto px-4">
+          <h2 class="text-3xl font-bold text-center mb-12">About Us</h2>
+          <p class="text-lg text-gray-700 text-center max-w-3xl mx-auto">
+              HealthyPlate: Diet Recommendation System is dedicated to helping you achieve your health goals through personalized diet recommendations. Our team of experts combines science and technology to provide you with the best nutrition advice.
+          </p>
+      </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-success text-white py-4">
+      <div class="container mx-auto text-center">
+          <p>© 2025 Design by Satkar Shrestha and Sandhya Gharti. All rights reserved.</p>
+      </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+      // Global variables (for site-wide functions like alerts and contact form)
+      let currentUser = null;
+
+      // Show alert message (utility function)
+      function showAlert(message, type) {
+          // Remove existing alerts
+          const existingAlerts = document.querySelectorAll(".alert");
+          existingAlerts.forEach((alert) => alert.remove());
+
+          // Create new alert
+          const alertDiv = document.createElement("div");
+          alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+          alertDiv.style.top = "20px";
+          alertDiv.style.right = "20px";
+          alertDiv.style.zIndex = "9999";
+          alertDiv.style.minWidth = "300px";
+
+          alertDiv.innerHTML = `
+              ${message}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          `;
+
+          document.body.appendChild(alertDiv);
+
+          // Auto remove after 5 seconds
+          setTimeout(() => {
+              if (alertDiv.parentNode) {
+                  alertDiv.remove();
+              }
+          }, 5000);
+      }
+
+      // Logout function (remains in main.js as it's a common action)
+      function logout() {
+          if (confirm("Are you sure you want to logout?")) {
+              fetch("/api/logout", {
+                  method: "POST",
+              })
+              .then((response) => response.json())
+              .then((data) => {
+                  if (data.success) {
+                      window.location.href = "/";
+                  }
+              })
+              .catch((error) => {
+                  console.error("Logout error:", error);
+                  window.location.href = "/"; // Redirect even on error to ensure session clear
+              });
+          }
+      }
+
+      // Check authentication status on page load for general redirects and navbar update
+      document.addEventListener("DOMContentLoaded", () => {
+          fetch("/api/auth-status")
+              .then((response) => response.json())
+              .then((data) => {
+                  const guestNav = document.getElementById('guest-nav');
+                  const userNav = document.getElementById('user-nav');
+                  const usernameDisplay = document.getElementById('username-display-index');
+                  const usernameDisplayDropdown = document.getElementById('username-display-dropdown-index');
+
+
+                  if (data.authenticated) {
+                      currentUser = data.user || data.admin;
+                      if (data.user_type === "admin") {
+                          // If on a user-facing page, redirect admin to admin dashboard
+                          if (!window.location.pathname.startsWith("/admin")) {
+                              window.location.href = "/admin";
+                          }
+                      } else { // user_type === "user"
+                          guestNav.classList.add('hidden');
+                          userNav.classList.remove('hidden');
+                          if (usernameDisplay && data.user) {
+                              usernameDisplay.textContent = data.user.first_name || data.user.username;
+                              usernameDisplayDropdown.textContent = data.user.first_name || data.user.username;
+                          }
+                          // If on an admin-facing page, redirect user to user dashboard
+                          if (window.location.pathname.startsWith("/admin")) {
+                              window.location.href = "/diet-form"; // Redirect to diet form if user is on admin page
+                          }
+                      }
+                  } else {
+                      guestNav.classList.remove('hidden');
+                      userNav.classList.add('hidden');
+                      // If not authenticated and on a protected page, redirect to index
+                      if (window.location.pathname.startsWith("/diet-form") || window.location.pathname.startsWith("/admin")) {
+                          window.location.href = "/";
+                      }
+                  }
+              })
+              .catch((error) => {
+                  console.error("Error checking auth status:", error);
+                  // If auth check fails, assume not authenticated and redirect if on protected page
+                  if (window.location.pathname.startsWith("/diet-form") || window.location.pathname.startsWith("/admin")) {
+                      window.location.href = "/";
+                  }
+              });
+      });
+  </script>
+</body>
+</html>

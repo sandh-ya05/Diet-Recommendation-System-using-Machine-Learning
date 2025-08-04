@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Login - HealthyPlate</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-gray-100 font-sans flex items-center justify-center min-h-screen">
+  <div class="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
+      <h2 class="text-3xl font-bold text-center mb-6 text-success">User Login</h2>
+      <div class="mb-4">
+          <label for="userUsername" class="form-label text-gray-700">Username or Email</label>
+          <input type="text" id="userUsername" class="form-control" placeholder="Enter username or email" required>
+      </div>
+      <div class="mb-6">
+          <label for="userPassword" class="form-label text-gray-700">Password</label>
+          <input type="password" id="userPassword" class="form-control" placeholder="Enter password" required>
+      </div>
+      <button type="button" class="btn btn-success w-full mb-3" onclick="submitUserLogin()">Login</button>
+      <p class="text-center text-gray-600">Don't have an account? <a href="{{ url_for('register_page') }}" class="text-success hover:underline">Register here</a></p>
+      <p class="text-center text-gray-600">Are you an admin? <a href="{{ url_for('admin_login_page') }}" class="text-success hover:underline">Login as Admin</a></p>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+      // Show alert message (utility function)
+      function showAlert(message, type) {
+          const existingAlerts = document.querySelectorAll(".alert");
+          existingAlerts.forEach((alert) => alert.remove());
+
+          const alertDiv = document.createElement("div");
+          alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+          alertDiv.style.top = "20px";
+          alertDiv.style.right = "20px";
+          alertDiv.style.zIndex = "9999";
+          alertDiv.style.minWidth = "300px";
+
+          alertDiv.innerHTML = `
+              ${message}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          `;
+          document.body.appendChild(alertDiv);
+
+          setTimeout(() => {
+              if (alertDiv.parentNode) {
+                  alertDiv.remove();
+              }
+          }, 5000);
+      }
+
+      // Handles user login functionality
+      document.addEventListener("DOMContentLoaded", () => {
+          fetch("/api/auth-status")
+              .then((response) => response.json())
+              .then((data) => {
+                  if (data.authenticated && data.user_type === "user") {
+                      window.location.href = "/"; // Redirect to main page after user login
+                  } else if (data.authenticated && data.user_type === "admin") {
+                      window.location.href = "/admin";
+                  }
+              })
+              .catch((error) => {
+                  console.error("Error checking auth status:", error);
+              });
+      });
+
+      function submitUserLogin() {
+          const username = document.getElementById("userUsername").value;
+          const password = document.getElementById("userPassword").value;
+
+          if (!username || !password) {
+              showAlert("Please fill out all fields.", "danger");
+              return;
+          }
+
+          fetch("/api/login", {
+              method: "POST",
+              headers: {
+                  "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                  username: username,
+                  password: password,
+              }),
+          })
+          .then((response) => response.json())
+          .then((data) => {
+              if (data.success) {
+                  showAlert("Login successful! Redirecting...", "success");
+                  setTimeout(() => {
+                      window.location.href = "/"; // Redirect to main page after user login
+                  }, 1500);
+              } else {
+                  showAlert(data.message, "danger");
+              }
+          })
+          .catch((error) => {
+              showAlert("An error occurred. Please try again.", "danger");
+          });
+      }
+  </script>
+</body>
+</html>

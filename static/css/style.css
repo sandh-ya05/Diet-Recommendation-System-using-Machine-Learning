@@ -1,0 +1,191 @@
+* {
+  margin: 0%;
+  padding: 0%;
+}
+
+/* Common styles */
+.hero-bg {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("/static/images/main.jpg"); 
+  background-size: cover;
+  background-position: center;
+}
+
+.card-img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+}
+
+.navbar-nav {
+  display: flex;
+  flex-direction: row; /* Changed back to row */
+  align-items: center; /* Align items vertically in the center */
+  gap: 1rem; /* Add some space between links */
+}
+
+@media (max-width: 768px) {
+  .navbar-nav {
+    flex-direction: row; /* Keep it row on smaller screens for consistency with the request */
+    flex-wrap: wrap; /* Allow wrapping if space is limited */
+    justify-content: center; /* Center items when they wrap */
+  }
+}
+
+/* Dropdown styles */
+#loginDropdown {
+  position: relative;
+}
+
+#loginDropdown .dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 150px;
+  transform: none !important;
+  margin-top: 0;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#loginDropdown .dropdown-menu.show {
+  display: block;
+}
+
+#userDropdown {
+  position: relative;
+}
+
+#userDropdown .dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 150px;
+  transform: none !important;
+  margin-top: 0;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#userDropdown .dropdown-menu.show {
+  display: block;
+}
+
+/* Form steps */
+.form-step {
+  display: none;
+}
+
+.form-step.active {
+  display: block;
+}
+
+/* Table styles */
+.table-img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 0.25rem;
+}
+
+/* Loading spinner */
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Alert styles */
+.alert {
+  margin-bottom: 1rem;
+}
+
+/* Custom button styles */
+.btn-success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+  background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+/* Responsive table */
+.table-responsive {
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .table-responsive table {
+    font-size: 0.875rem;
+  }
+}
+
+/* Enhanced styles for better visual appeal */
+.border-left {
+  border-left: 4px solid #28a745 !important;
+}
+
+.text-success {
+  color: #28a745 !important;
+}
+
+.bg-light {
+  background-color: #f8f9fa !important;
+}
+
+/* Nutrition targets styling */
+.nutrition-target {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-left: 4px solid #28a745;
+  transition: transform 0.2s ease;
+}
+
+.nutrition-target:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Meal card styling */
+.meal-card {
+  background: #fff;
+  border-left: 4px solid #28a745;
+  transition: all 0.3s ease;
+}
+
+.meal-card:hover {
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.15);
+}
+
+/* Results section enhancements */
+#results {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .nutrition-target {
+    margin-bottom: 1rem;
+  }
+
+  .meal-card {
+    margin-bottom: 1rem;
+  }
+}
