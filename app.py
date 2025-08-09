@@ -9,6 +9,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 import json
+from datetime import datetime # Import datetime
 
 # Import functions from database.py and ml_model.py
 from database import init_db
@@ -56,20 +57,133 @@ def admin_login_page():
 def diet_form_page():
   if 'user_id' not in session:
       return redirect(url_for('login_page'))
-  return render_template('diet-form.html') # Renamed from healthyplate.html
+  
+  conn = sqlite3.connect('healthyplate.db')
+  cursor = conn.cursor()
+  cursor.execute('SELECT first_name, last_name FROM users WHERE id = ?', (session['user_id'],))
+  user_info = cursor.fetchone()
+  conn.close()
+
+  user_full_name = f"{user_info[0]} {user_info[1]}" if user_info else ""
+
+  return render_template('diet-form.html', user_full_name=user_full_name) # Renamed from healthyplate.html
+
+# New route for user profile management
+@app.route('/profile')
+def profile_page():
+    if 'user_id' not in session:
+        return redirect(url_for('login_page'))
+    return render_template('profile.html')
+
+# New route for user diet history
+@app.route('/diet-history')
+def diet_history_page():
+    if 'user_id' not in session:
+        return redirect(url_for('login_page'))
+    
+    conn = sqlite3.connect('healthyplate.db')
+    cursor = conn.cursor()
+    
+    # Fetch all diet results for the logged-in user
+    cursor.execute('''
+        SELECT * FROM diet_results
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+    ''', (session['user_id'],))
+    
+    diet_results_raw = cursor.fetchall()
+    
+    # Define column names for diet_results table (UPDATED for removed columns)
+    diet_result_columns = [
+        'id', 'user_id', 'name', 'age', 'gender', 'height', 'weight',
+        'fitness_goal', 'food_preference', 'activity_level', 'bmi', 'body_type',
+        'daily_calorie_target', 'protein_target', 'carbs_target', 'fat_target',
+        'fiber_target', 'sugar_target', 'sodium_target',
+        'breakfast', 'lunch', 'dinner', 'snack', 'created_at'
+    ]
+    
+    # Convert to a list of dictionaries for easier access in Jinja2
+    user_diet_history = []
+    for row in diet_results_raw:
+        user_diet_history.append(dict(zip(diet_result_columns, row)))
+
+    conn.close()
+    return render_template('diet-history.html', diet_history=user_diet_history)
+
 
 @app.route('/admin')
 def admin_dashboard():
   if 'admin_id' not in session:
       return redirect(url_for('admin_login_page'))
-  return render_template('admin.html')
+  
+  conn = sqlite3.connect('healthyplate.db')
+  cursor = conn.cursor()
+  
+  # Fetch all diet results directly for rendering
+  cursor.execute('''
+      SELECT dr.*, u.username, u.email 
+      FROM diet_results dr
+      JOIN users u ON dr.user_id = u.id
+      ORDER BY dr.created_at DESC
+  ''')
+  diet_results_raw = cursor.fetchall()
+  
+  # Define column names for diet_results table + joined user columns (UPDATED for removed columns)
+  diet_result_columns = [
+      'id', 'user_id', 'name', 'age', 'gender', 'height', 'weight',
+      'fitness_goal', 'food_preference', 'activity_level', 'bmi', 'body_type',
+      'daily_calorie_target', 'protein_target', 'carbs_target', 'fat_target',
+      'fiber_target', 'sugar_target', 'sodium_target',
+      'breakfast', 'lunch', 'dinner', 'snack', 'created_at', 'username', 'email'
+  ]
+  
+  # Convert to a list of dictionaries for easier access in Jinja2
+  diet_results_for_template = []
+  for row in diet_results_raw:
+      diet_results_for_template.append(dict(zip(diet_result_columns, row)))
+
+  conn.close()
+
+  # Handle messages from redirects (e.g., after deletion)
+  success_message = request.args.get('success')
+  error_message = request.args.get('error')
+
+  return render_template('admin.html', 
+                         diet_results=diet_results_for_template,
+                         success_message=success_message,
+                         error_message=error_message)
+
+@app.route('/admin/delete-diet-result', methods=['GET'])
+def delete_diet_result_query():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login_page')) # Or show an error
+    
+    result_id = request.args.get('id', type=int)
+    
+    if result_id is None:
+        # Handle missing ID, maybe redirect with an error message
+        return redirect(url_for('admin_dashboard', error='Missing diet result ID for deletion.'))
+    
+    conn = sqlite3.connect('healthyplate.db')
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('DELETE FROM diet_results WHERE id = ?', (result_id,))
+        conn.commit()
+        # Redirect back to the admin dashboard after deletion
+        return redirect(url_for('admin_dashboard', success='Diet result deleted successfully!'))
+    except Exception as e:
+        print(f"Error deleting diet result via query: {e}")
+        return redirect(url_for('admin_dashboard', error=f'Error deleting diet result: {str(e)}'))
+    finally:
+        conn.close()
 
 @app.route('/api/auth-status')
 def auth_status():
   if 'user_id' in session:
       conn = sqlite3.connect('healthyplate.db')
       cursor = conn.cursor()
-      cursor.execute('SELECT username, first_name, last_name FROM users WHERE id = ?', (session['user_id'],))
+      cursor.execute('SELECT username, email, first_name, last_name FROM users WHERE id = ?', (session['user_id'],))
       user = cursor.fetchone()
       conn.close()
       
@@ -80,8 +194,9 @@ def auth_status():
               'user': {
                   'id': session['user_id'],
                   'username': user[0],
-                  'first_name': user[1],
-                  'last_name': user[2]
+                  'email': user[1],
+                  'first_name': user[2],
+                  'last_name': user[3]
               }
           })
   elif 'admin_id' in session:
@@ -220,8 +335,7 @@ def diet_recommendation():
       age = data.get('age')
       weight = data.get('weight')
       height = data.get('height')
-      waist_size = data.get('waist_size')
-      hip_size = data.get('hip_size')
+
       
       height_unit = data.get('height_unit', 'cm')
       weight_unit = data.get('weight_unit', 'kg')
@@ -240,17 +354,13 @@ def diet_recommendation():
       else: # 'kg'
           weight_kg = weight
       
-      # Validation with new ranges
+      # Validation with new ranges 
       if not (1 <= age <= 120):
           return jsonify({'success': False, 'message': 'Age must be between 1 and 120 years'})
       if not (1 <= weight_kg <= 300): # Assuming 300kg is the max for kg
           return jsonify({'success': False, 'message': 'Weight must be between 1 and 300 kg'})
       if not (50 <= height_cm <= 250): # Assuming 50cm is min for cm
           return jsonify({'success': False, 'message': 'Height must be between 50 and 250 cm'})
-      if not (50 <= waist_size <= 200):
-          return jsonify({'success': False, 'message': 'Waist size must be between 50 and 200 cm'})
-      if not (60 <= hip_size <= 200):
-          return jsonify({'success': False, 'message': 'Hip size must be between 60 and 200 cm'})
       
       # Calculate BMI and body type
       bmi, body_type = calculate_bmi_and_body_type(height_cm, weight_kg)
@@ -275,20 +385,20 @@ def diet_recommendation():
       # Generate personalized diet plan
       diet_plan = generate_personalized_diet_plan(models, user_data)
       
-      # Save to database
+      # Save to database 
       conn = sqlite3.connect('healthyplate.db')
       cursor = conn.cursor()
       
       cursor.execute('''
           INSERT INTO diet_results 
-          (user_id, name, age, gender, height, weight, waist_size, hip_size, 
+          (user_id, name, age, gender, height, weight, 
            fitness_goal, food_preference, activity_level, bmi, body_type,
            daily_calorie_target, protein_target, carbs_target, fat_target, 
            fiber_target, sugar_target, sodium_target,
            breakfast, lunch, dinner, snack)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ''', (session['user_id'], data.get('name'), age, data.get('gender'), 
-            height_cm, weight_kg, waist_size, hip_size, data.get('fitness_goal'),
+            height_cm, weight_kg, data.get('fitness_goal'),
             data.get('food_preference'), data.get('activity_level', 'moderate'),
             bmi, body_type, diet_plan['daily_calories'], diet_plan['protein'],
             diet_plan['carbohydrates'], diet_plan['fat'], diet_plan['fiber'],
@@ -310,103 +420,183 @@ def diet_recommendation():
       
   except Exception as e:
       return jsonify({'success': False, 'message': str(e)})
-  
-  #download diet plan
 
 @app.route('/api/download-diet-plan/<int:result_id>')
 def download_diet_plan(result_id):
+  try:
+      if 'user_id' not in session:
+          return jsonify({'success': False, 'message': 'Please login first'})
+      
+      conn = sqlite3.connect('healthyplate.db')
+      cursor = conn.cursor()
+      
+      # Fetch diet result
+      cursor.execute('''
+          SELECT * FROM diet_results 
+          WHERE id = ? AND user_id = ?
+      ''', (result_id, session['user_id']))
+      result = cursor.fetchone()
+
+      # Fetch user's name
+      cursor.execute('SELECT first_name, last_name FROM users WHERE id = ?', (session['user_id'],))
+      user_info = cursor.fetchone()
+      conn.close()
+      
+      if not result:
+          return jsonify({'success': False, 'message': 'Diet plan not found'})
+      
+      user_name = ""
+      if user_info:
+          user_name = f"{user_info[0]} {user_info[1]}".replace(" ", "_").lower() # Format name for filename
+      
+      # Create PDF
+      buffer = io.BytesIO()
+      doc = SimpleDocTemplate(buffer, pagesize=letter)
+      styles = getSampleStyleSheet()
+      story = []
+      
+      # Title
+      title = Paragraph("HealthyPlate - Personalized Diet Plan", styles['Title'])
+      story.append(title)
+      story.append(Spacer(1, 0.2 * inch))
+      
+      # User info 
+      user_info_text = f"""
+      <b>Name:</b> {result[2]}<br/>
+      <b>Age:</b> {result[3]} years<br/>
+      <b>Gender:</b> {result[4].title()}<br/>
+      <b>Height:</b> {round(result[5], 2)} cm<br/>
+      <b>Weight:</b> {round(result[6], 2)} kg<br/>
+      <b>BMI:</b> {result[10]} ({result[11]})<br/>
+      <b>Fitness Goal:</b> {result[7].replace('_', ' ').title()}<br/>
+      <b>Food Preference:</b> {result[8].replace('_', ' ').title()}<br/>
+      <b>Activity Level:</b> {result[9].replace('_', ' ').title()}
+      """
+      
+      user_para = Paragraph(user_info_text, styles['Normal'])
+      story.append(user_para)
+      story.append(Spacer(1, 0.2 * inch))
+      
+      # Nutritional targets 
+      nutrition_info = f"""
+      <b>Daily Nutritional Targets:</b><br/>
+      <b>Calories:</b> {result[12]} kcal<br/>
+      <b>Protein:</b> {result[13]}g<br/>
+      <b>Carbohydrates:</b> {result[14]}g<br/>
+      <b>Fat:</b> {result[15]}g<br/>
+      <b>Fiber:</b> {result[16]}g<br/>
+      <b>Sugar:</b> {result[17]}g<br/>
+      <b>Sodium:</b> {result[18]}mg
+      """
+      
+      nutrition_para = Paragraph(nutrition_info, styles['Normal'])
+      story.append(nutrition_para)
+      story.append(Spacer(1, 0.2 * inch))
+      
+      # Diet plan 
+      diet_title = Paragraph("Recommended Diet Plan", styles['Heading2'])
+      story.append(diet_title)
+      story.append(Spacer(1, 0.1 * inch))
+      
+      meals = {
+          'Breakfast': result[19],
+          'Lunch': result[20],
+          'Dinner': result[21],
+          'Snack': result[22]
+      }
+      
+      for meal, description in meals.items():
+          meal_para = Paragraph(f"<b>{meal}:</b> {description}", styles['Normal'])
+          story.append(meal_para)
+          story.append(Spacer(1, 0.1 * inch))
+      
+      doc.build(story)
+      buffer.seek(0)
+      
+      download_name = f'{user_name}_diet_plan.pdf' if user_name else f'healthyplate_diet_plan_{result_id}.pdf'
+
+      return send_file(
+          buffer,
+          as_attachment=True,
+          download_name=download_name,
+          mimetype='application/pdf'
+      )
+      
+  except Exception as e:
+      print(f"Error generating PDF: {e}") # Log error for debugging
+      return jsonify({'success': False, 'message': f'Error generating PDF: {str(e)}'})
+
+
+
+# New API endpoint for user profile updates
+@app.route('/api/user/profile', methods=['PUT'])
+def update_user_profile():
     try:
         if 'user_id' not in session:
-            return jsonify({'success': False, 'message': 'Please login first'})
-
+            return jsonify({'success': False, 'message': 'Authentication required'})
+        
+        data = request.json
+        user_id = session['user_id']
+        
+        username = data.get('username')
+        email = data.get('email')
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        password = data.get('password') # Optional: only update if provided
+        
         conn = sqlite3.connect('healthyplate.db')
         cursor = conn.cursor()
-
-        # Fetch the diet result
-        cursor.execute('''
-            SELECT * FROM diet_results 
-            WHERE id = ? AND user_id = ?
-        ''', (result_id, session['user_id']))
-        result = cursor.fetchone()
-        conn.close()
-
-        if not result:
-            return jsonify({'success': False, 'message': 'Diet plan not found'})
-
-        # Build the PDF
-        buffer = io.BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter)
-        styles = getSampleStyleSheet()
-        story = []
-
-        # Title
-        story.append(Paragraph("HealthyPlate - Personalized Diet Plan", styles['Title']))
-        story.append(Spacer(1, 0.2 * inch))
-
-        # User info
-        user_info = f"""
-        <b>Name:</b> {result[2]}<br/>
-        <b>Age:</b> {result[3]}<br/>
-        <b>Gender:</b> {result[4].title()}<br/>
-        <b>Height:</b> {round(result[5], 2)} cm<br/>
-        <b>Weight:</b> {round(result[6], 2)} kg<br/>
-        <b>Waist Size:</b> {result[7]} cm<br/>
-        <b>Hip Size:</b> {result[8]} cm<br/>
-        <b>Fitness Goal:</b> {result[9].replace('_', ' ').title()}<br/>
-        <b>Food Preference:</b> {result[10].replace('_', ' ').title()}<br/>
-        <b>Activity Level:</b> {result[11].replace('_', ' ').title()}<br/>
-        <b>BMI:</b> {result[12]} ({result[13]})<br/>
-        """
-        story.append(Paragraph(user_info, styles['Normal']))
-        story.append(Spacer(1, 0.2 * inch))
-
-        # Nutritional Targets
-        nutrition_info = f"""
-        <b>Daily Nutritional Targets:</b><br/>
-        <b>Calories:</b> {result[14]} kcal<br/>
-        <b>Protein:</b> {result[15]}g<br/>
-        <b>Carbs:</b> {result[16]}g<br/>
-        <b>Fat:</b> {result[17]}g<br/>
-        <b>Fiber:</b> {result[18]}g<br/>
-        <b>Sugar:</b> {result[19]}g<br/>
-        <b>Sodium:</b> {result[20]}mg
-        """
-        story.append(Paragraph(nutrition_info, styles['Normal']))
-        story.append(Spacer(1, 0.2 * inch))
-
-        # Diet plan meals
-        story.append(Paragraph("Recommended Diet Plan", styles['Heading2']))
-        story.append(Spacer(1, 0.1 * inch))
-
-        meals = {
-            'Breakfast': result[21],
-            'Lunch': result[22],
-            'Dinner': result[23],
-            'Snack': result[24]
-        }
-
-        for meal, desc in meals.items():
-            meal_text = f"<b>{meal}:</b> {desc if desc else 'Not provided'}"
-            story.append(Paragraph(meal_text, styles['Normal']))
-            story.append(Spacer(1, 0.1 * inch))
-
-        doc.build(story)
-        buffer.seek(0)
-
-        return send_file(
-            buffer,
-            as_attachment=True,
-            download_name=f'healthyplate_diet_plan_{result_id}.pdf',
-            mimetype='application/pdf'
-        )
-
+        
+        update_fields = []
+        params = []
+        
+        if username:
+            update_fields.append("username = ?")
+            params.append(username)
+        if email:
+            update_fields.append("email = ?")
+            params.append(email)
+        if first_name:
+            update_fields.append("first_name = ?")
+            params.append(first_name)
+        if last_name:
+            update_fields.append("last_name = ?")
+            params.append(last_name)
+        if password:
+            if len(password) < 6:
+                return jsonify({'success': False, 'message': 'Password must be at least 6 characters long.'})
+            hashed_password = hashlib.sha256(password.encode()).hexdigest()
+            update_fields.append("password = ?")
+            params.append(hashed_password)
+        
+        if not update_fields:
+            return jsonify({'success': False, 'message': 'No fields provided for update'})
+            
+        query = f"UPDATE users SET {', '.join(update_fields)} WHERE id = ?"
+        params.append(user_id)
+        
+        try:
+            cursor.execute(query, tuple(params))
+            conn.commit()
+            if cursor.rowcount == 0:
+                return jsonify({'success': False, 'message': 'User not found or no changes made'})
+            
+            # Update session username if it was changed
+            if username:
+                session['username'] = username
+            
+            return jsonify({'success': True, 'message': 'Profile updated successfully!'})
+        except sqlite3.IntegrityError:
+            return jsonify({'success': False, 'message': 'Username or email already exists.'})
+        finally:
+            conn.close()
+            
     except Exception as e:
-        print(f"Error generating PDF: {e}")
-        return jsonify({'success': False, 'message': f'Error generating PDF: {str(e)}'})
-
+        return jsonify({'success': False, 'message': str(e)})
 
 
 # Admin routes
+
 
 @app.route('/api/admin/users', methods=['GET'])
 def get_users():
@@ -549,76 +739,7 @@ def delete_user(user_id):
   except Exception as e:
       return jsonify({'success': False, 'message': str(e)})
 
-@app.route('/api/admin/diet-results', methods=['GET'])
-def get_diet_results():
-  try:
-      if 'admin_id' not in session:
-          return jsonify({'success': False, 'message': 'Admin access required'})
-      
-      conn = sqlite3.connect('healthyplate.db')
-      cursor = conn.cursor()
-      
-      cursor.execute('''
-          SELECT dr.*, u.username, u.email 
-          FROM diet_results dr
-          JOIN users u ON dr.user_id = u.id
-          ORDER BY dr.created_at DESC
-      ''')
-      results = cursor.fetchall()
-      conn.close()
-      
-      results_list = []
-      for result in results:
-          results_list.append({
-              'id': result[0],
-              'user_id': result[1],
-              'name': result[2],
-              'age': result[3],
-              'gender': result[4],
-              'height': result[5],
-              'weight': result[6],
-              'bmi': result[11],
-              'body_type': result[12],
-              'fitness_goal': result[8],
-              'food_preference': result[9],
-              'daily_calories': result[13],
-              'protein': result[14],
-              'carbs': result[15],
-              'fat': result[16],
-              'fiber': result[17],
-              'sugar': result[18],
-              'sodium': result[19],
-              'breakfast': result[20],
-              'lunch': result[21],
-              'dinner': result[22],
-              'snack': result[23],
-              'created_at': result[24],
-              'username': result[25],
-              'email': result[26]
-          })
-      
-      return jsonify({'success': True, 'results': results_list})
-      
-  except Exception as e:
-      return jsonify({'success': False, 'message': str(e)})
 
-@app.route('/api/admin/diet-results/<int:result_id>', methods=['DELETE'])
-def delete_diet_result(result_id):
-  try:
-      if 'admin_id' not in session:
-          return jsonify({'success': False, 'message': 'Admin access required'})
-      
-      conn = sqlite3.connect('healthyplate.db')
-      cursor = conn.cursor()
-      
-      cursor.execute('DELETE FROM diet_results WHERE id = ?', (result_id,))
-      conn.commit()
-      conn.close()
-      
-      return jsonify({'success': True, 'message': 'Diet result deleted successfully'})
-      
-  except Exception as e:
-      return jsonify({'success': False, 'message': str(e)})
 
 if __name__ == '__main__':
   init_db() # Initialize database

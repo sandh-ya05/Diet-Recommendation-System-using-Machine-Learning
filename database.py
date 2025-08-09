@@ -30,9 +30,21 @@ def init_db():
         )
     ''')
     
-  
+    # Meals table (for admin-added meals)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS meals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL,
+            description TEXT NOT NULL,
+            calories INTEGER NOT NULL,
+            created_by INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (created_by) REFERENCES admins (id)
+        )
+    ''')
     
-    # User diet results table
+    # User diet results table - UPDATED: Removed waist_size and hip_size
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS diet_results (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,8 +54,6 @@ def init_db():
             gender TEXT NOT NULL,
             height REAL NOT NULL,
             weight REAL NOT NULL,
-            waist_size REAL NOT NULL,
-            hip_size REAL NOT NULL,
             fitness_goal TEXT NOT NULL,
             food_preference TEXT NOT NULL,
             activity_level TEXT DEFAULT 'moderate',
@@ -68,9 +78,9 @@ def init_db():
     # Insert default admin if not exists
     cursor.execute('SELECT COUNT(*) FROM admins WHERE username = ?', ('admin',))
     if cursor.fetchone()[0] == 0:
-        admin_password = hashlib.sha256('admin123'.encode()).hexdigest()
+        hashed_password = hashlib.sha256('admin123'.encode()).hexdigest()
         cursor.execute('INSERT INTO admins (username, password) VALUES (?, ?)', 
-                      ('admin', admin_password))
+                      ('admin', hashed_password))
     
     conn.commit()
     conn.close()
