@@ -11,6 +11,7 @@ A comprehensive diet recommendation system that uses machine learning and real n
 - Personalized diet recommendations using real nutrition dataset
 - Detailed nutritional targets (calories, protein, carbs, fat, fiber, sugar, sodium)
 - PDF download of complete diet plans
+- View the past history
 - Responsive design with proper validation ranges
 
 ### Admin Features
@@ -105,7 +106,7 @@ The system uses two ML algorithms trained on your actual nutrition dataset:
 
 
 ### Diet Results Table
-- id, user_id, name, age, gender, height, weight, waist_size, hip_size
+- id, user_id, name, age, gender, height, weight
 - fitness_goal, food_preference, activity_level, bmi, body_type
 - daily_calorie_target, protein_target, carbs_target, fat_target, fiber_target, sugar_target, sodium_target
 - breakfast, lunch, dinner, snack, created_at
